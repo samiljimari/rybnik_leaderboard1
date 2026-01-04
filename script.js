@@ -56,7 +56,7 @@ function renderApp(){
   } else {
     loginEl.classList.add('hidden');
     appEl.classList.remove('hidden');
-    $('#user-area').innerHTML = `<div>Signed in as <strong>${escapeHtml(user)}</strong> — <a href="#" id="signout">Sign out</a></div>`;
+    $('#user-area').innerHTML = `<div>Signed in as <strong>${escapeHtml(user)}</strong> — <button id="signout" class="signout-button" type="button">Sign out</button></div>`;
     $('#signout').onclick = (e)=>{e.preventDefault(); logout();};
     renderLeaderboards();
   }
@@ -70,6 +70,8 @@ function addEntry(user, type, value){
   const entry = {v: value, t: Date.now()};
   if(type === 'speed') data[user].speeds.push(entry);
   else if(type === 'bac') data[user].bacs.push(entry);
+  // Track timestamps of recent saves to avoid echoing snaps back to server
+  const lastSavedAt = {};
   saveData(data);
   // If Firebase is available, push this user's updated record remotely too and show toast on result
   if(window.FB && typeof window.FB.saveUser === 'function'){
@@ -81,12 +83,14 @@ function addEntry(user, type, value){
         showToast('Cloud save failed', {error:true});
       });
     }catch(e){ console.warn('Remote save failed', e); showToast('Cloud save failed', {error:true}); }
-  }
-}
-
-function renderLeaderboards(){
-  const data = loadData();
-  const users = Object.keys(data);
+        lastSavedAt[user] = Date.now();
+        window.FB.saveUser(user, data[user]).then(()=>{
+          lastSavedAt[user] = Date.now();
+          showToast('Saved to cloud');
+        }).catch(err=>{
+          console.warn('Remote save failed', err);
+          showToast('Cloud save failed', {error:true});
+        });
 
   // Build best-per-user lists
   const speedList = [];
