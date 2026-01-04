@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ski Trip Leaderboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Ski Trip Leaderboard</h1>
+      <div id="user-area"></div>
+      <div id="fb-status" class="muted">Firebase: unavailable</div>
+    </header>
+
+    <main>
+      <div id="login" class="card">
+        <h2>Sign in</h2>
+        <form id="login-form">
+          <input id="username" placeholder="Enter username (e.g. patrick)" required />
+          <button type="submit">Sign in</button>
+        </form>
+        <p class="hint">No password — name identifies your profile.</p>
+      </div>
+
+      <div id="app" class="hidden">
+        <div class="tabs">
+          <button data-tab="speed" class="active">Top Speed</button>
+          <button data-tab="bac">Highest BAC</button>
+        </div>
+
+        <section id="speed" class="tab-panel">
+          <h3>Record a top speed (km/h)</h3>
+          <form id="speed-form" class="inline-form">
+            <input id="speed-input" type="number" min="0" step="0.1" placeholder="e.g. 88.5" required />
+            <button type="submit">Submit</button>
+          </form>
+          <h4>Leaderboard — Top Speed</h4>
+          <table id="speed-table" class="leaderboard">
+            <thead><tr><th>Rank</th><th>Name</th><th>Speed (km/h)</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <h4>History</h4>
+          <div id="speed-history" class="history"></div>
+        </section>
+
+        <section id="bac" class="tab-panel hidden">
+          <h3>Record BAC (%)</h3>
+          <form id="bac-form" class="inline-form">
+            <input id="bac-input" type="number" min="0" max="1.5" step="0.001" placeholder="e.g. 0.085 or 1.5 (percent)" required />
+            <button type="submit">Submit</button>
+          </form>
+          <h4>Leaderboard — Highest BAC</h4>
+          <table id="bac-table" class="leaderboard">
+            <thead><tr><th>Rank</th><th>Name</th><th>BAC (%)</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <h4>History</h4>
+          <div id="bac-history" class="history"></div>
+        </section>
+      </div>
+
+      <footer>
+        <p class="muted">Optional: add a `config.js` with Firebase config to sync data across visitors. Otherwise data is stored locally in your browser.</p>
+      </footer>
+    </main>
+  </div>
+
+  <script src="config.js"></script>
+  <script type="module" src="firebase-init.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
