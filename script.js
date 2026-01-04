@@ -71,9 +71,16 @@ function addEntry(user, type, value){
   if(type === 'speed') data[user].speeds.push(entry);
   else if(type === 'bac') data[user].bacs.push(entry);
   saveData(data);
-  // If Firebase is available, push this user's updated record remotely too.
+  // If Firebase is available, push this user's updated record remotely too and show toast on result
   if(window.FB && typeof window.FB.saveUser === 'function'){
-    try{ window.FB.saveUser(user, data[user]); }catch(e){ console.warn('Remote save failed', e); }
+    try{
+      window.FB.saveUser(user, data[user]).then(()=>{
+        showToast('Saved to cloud');
+      }).catch(err=>{
+        console.warn('Remote save failed', err);
+        showToast('Cloud save failed', {error:true});
+      });
+    }catch(e){ console.warn('Remote save failed', e); showToast('Cloud save failed', {error:true}); }
   }
 }
 
@@ -164,19 +171,62 @@ function renderHistory(type){
   });
 }
 
+// Pending deletes map key -> {timer, backup}
+const pendingDeletes = new Map();
+
 function deleteEntry(name, type, ts){
   const data = loadData();
   if(!data[name]) return;
-  if(type === 'speed'){
-    data[name].speeds = (data[name].speeds || []).filter(e=>e.t !== ts);
-  } else {
-    data[name].bacs = (data[name].bacs || []).filter(e=>e.t !== ts);
-  }
+  const arrName = type === 'speed' ? 'speeds' : 'bacs';
+  const arr = data[name][arrName] || [];
+  const idx = arr.findIndex(e=>e.t === ts);
+  if(idx === -1) return;
+
+  // Backup the entry so we can restore on undo
+  const backup = Object.assign({}, arr[idx]);
+  // Remove locally and save immediately for quick UI feedback
+  data[name][arrName] = arr.filter(e=>e.t !== ts);
   saveData(data);
-  if(window.FB && typeof window.FB.saveUser === 'function'){
-    try{ window.FB.saveUser(name, data[name]); }catch(e){ console.warn('Remote save failed', e); }
-  }
   renderLeaderboards();
+
+  // Show undo toast; finalize deletion after timeout
+  const key = `${name}|${type}|${ts}`;
+  if(pendingDeletes.has(key)){
+    clearTimeout(pendingDeletes.get(key).timer);
+    pendingDeletes.delete(key);
+  }
+
+  const undo = ()=>{
+    // restore
+    const cur = loadData();
+    cur[name] = cur[name] || {speeds:[], bacs:[]};
+    cur[name][arrName] = (cur[name][arrName] || []).concat([backup]).sort((a,b)=>a.t - b.t);
+    saveData(cur);
+    renderLeaderboards();
+    // cancel pending finalize
+    const p = pendingDeletes.get(key);
+    if(p){ clearTimeout(p.timer); pendingDeletes.delete(key); }
+    showToast('Restore successful');
+  };
+
+  showToast('Entry deleted', {actionText:'Undo', action:undo, timeout:6000});
+
+  const timer = setTimeout(()=>{
+    // finalize: push updated user to remote if available
+    const cur = loadData();
+    const userData = cur[name] || {speeds:[], bacs:[]};
+    if(window.FB && typeof window.FB.saveUser === 'function'){
+      window.FB.saveUser(name, userData).then(()=>{
+        showToast('Deletion synced');
+      }).catch(err=>{
+        console.warn('Remote save failed', err);
+        showToast('Cloud sync failed', {error:true});
+      });
+    }
+    pendingDeletes.delete(key);
+  }, 6000);
+
+  pendingDeletes.set(key, {timer, backup});
 }
 
 // Tab switching
@@ -187,6 +237,25 @@ document.addEventListener('click', (e)=>{
   document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active', b===btn));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('hidden', p.id!==tab));
 });
+
+// Toast helper
+function showToast(message, opts){
+  opts = opts || {};
+  const container = document.getElementById('toast-container');
+  if(!container) return;
+  const toast = document.createElement('div');
+  toast.className = 'toast' + (opts.error ? ' error' : '');
+  const msg = document.createElement('div'); msg.className = 'msg'; msg.textContent = message;
+  toast.appendChild(msg);
+  if(opts.actionText && typeof opts.action === 'function'){
+    const a = document.createElement('button'); a.className = 'action'; a.textContent = opts.actionText;
+    a.onclick = (e)=>{ e.preventDefault(); opts.action(); container.removeChild(toast); };
+    toast.appendChild(a);
+  }
+  container.appendChild(toast);
+  const t = opts.timeout || 4000;
+  setTimeout(()=>{ try{ if(container.contains(toast)) container.removeChild(toast); }catch(e){} }, t);
+}
 
 // Login form
 document.getElementById('login-form').addEventListener('submit', (e)=>{
