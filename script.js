@@ -150,12 +150,14 @@ function renderHistory(type){
     // If the entry belongs to the signed-in user, show delete button
     if(it.name === currentUser()){
       const btn = document.createElement('button');
+      btn.type = 'button';
       btn.className = 'history-delete';
       btn.title = 'Delete this entry';
       btn.textContent = 'Delete';
       btn.onclick = (e)=>{
         e.preventDefault();
-        if(!confirm('Delete this entry? This cannot be undone.')) return;
+        e.stopPropagation();
+        // delete without confirm (undo available)
         deleteEntry(it.name, type, it.t);
       };
       const right = document.createElement('div');
@@ -188,44 +190,46 @@ function deleteEntry(name, type, ts){
   data[name][arrName] = arr.filter(e=>e.t !== ts);
   saveData(data);
   renderLeaderboards();
-
-  // Show undo toast; finalize deletion after timeout
+  // Immediately push deletion to remote (if available) to avoid race with incoming snapshots
   const key = `${name}|${type}|${ts}`;
+  if(window.FB && typeof window.FB.saveUser === 'function'){
+    const cur = loadData();
+    const userData = cur[name] || {speeds:[], bacs:[]};
+    window.FB.saveUser(name, userData).then(()=>{
+      showToast('Deletion synced');
+    }).catch(err=>{
+      console.warn('Remote save failed', err);
+      showToast('Cloud sync failed', {error:true});
+    });
+  }
+
+  // Setup undo window: remote has deletion now; if undo, restore locally and push again
   if(pendingDeletes.has(key)){
     clearTimeout(pendingDeletes.get(key).timer);
     pendingDeletes.delete(key);
   }
-
   const undo = ()=>{
-    // restore
     const cur = loadData();
     cur[name] = cur[name] || {speeds:[], bacs:[]};
     cur[name][arrName] = (cur[name][arrName] || []).concat([backup]).sort((a,b)=>a.t - b.t);
     saveData(cur);
     renderLeaderboards();
-    // cancel pending finalize
-    const p = pendingDeletes.get(key);
-    if(p){ clearTimeout(p.timer); pendingDeletes.delete(key); }
-    showToast('Restore successful');
-  };
-
-  showToast('Entry deleted', {actionText:'Undo', action:undo, timeout:6000});
-
-  const timer = setTimeout(()=>{
-    // finalize: push updated user to remote if available
-    const cur = loadData();
-    const userData = cur[name] || {speeds:[], bacs:[]};
+    // push restored entry
     if(window.FB && typeof window.FB.saveUser === 'function'){
-      window.FB.saveUser(name, userData).then(()=>{
-        showToast('Deletion synced');
+      window.FB.saveUser(name, cur[name]).then(()=>{
+        showToast('Restore synced');
       }).catch(err=>{
         console.warn('Remote save failed', err);
         showToast('Cloud sync failed', {error:true});
       });
     }
-    pendingDeletes.delete(key);
-  }, 6000);
+    const p = pendingDeletes.get(key);
+    if(p){ clearTimeout(p.timer); pendingDeletes.delete(key); }
+  };
 
+  showToast('Entry deleted', {actionText:'Undo', action:undo, timeout:6000});
+
+  const timer = setTimeout(()=>{ pendingDeletes.delete(key); }, 6000);
   pendingDeletes.set(key, {timer, backup});
 }
 
