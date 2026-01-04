@@ -247,10 +247,19 @@ function startRemoteSyncIfAvailable(){
               return vals;
             }
 
-            merged[name] = {
-              speeds: mergeArr(r.speeds, l.speeds),
-              bacs: mergeArr(r.bacs, l.bacs)
-            };
+            // If this user is the currently signed-in user, prefer local data
+            const me = name === currentUser();
+            if(me){
+              merged[name] = {
+                speeds: (l.speeds || []).slice().sort((a,b)=>a.t - b.t),
+                bacs: (l.bacs || []).slice().sort((a,b)=>a.t - b.t)
+              };
+            } else {
+              merged[name] = {
+                speeds: mergeArr(r.speeds, l.speeds),
+                bacs: mergeArr(r.bacs, l.bacs)
+              };
+            }
           });
 
           // save merged to local
