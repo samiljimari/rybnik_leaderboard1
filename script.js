@@ -329,11 +329,14 @@ function startRemoteSyncIfAvailable() {
 
             const me = name === currentUser();
             if (me) {
+              // For current user, LOCAL is authoritative (they just made a delete/add locally)
+              // Don't merge with remote, use local exactly as-is
               merged[name] = {
                 speeds: (l.speeds || []).slice().sort((a, b) => a.t - b.t),
                 bacs: (l.bacs || []).slice().sort((a, b) => a.t - b.t)
               };
             } else {
+              // For other users, merge remote + local (union by timestamp)
               merged[name] = {
                 speeds: mergeArr(r.speeds, l.speeds),
                 bacs: mergeArr(r.bacs, l.bacs)
@@ -343,6 +346,7 @@ function startRemoteSyncIfAvailable() {
 
           saveData(merged);
 
+          // Push if merged differs from remote (and cooldown permits)
           users.forEach(name => {
             const r = remoteData[name] || { speeds: [], bacs: [] };
             const m = merged[name];
@@ -354,7 +358,10 @@ function startRemoteSyncIfAvailable() {
                 lastSavedAt[name] = Date.now();
                 window.FB.saveUser(name, m).then(() => {
                   lastSavedAt[name] = Date.now();
-                }).catch(() => { });
+                  console.log(`Merged data for ${name} pushed successfully`);
+                }).catch(err => {
+                  console.warn('Failed to push merged data for', name, err);
+                });
               } catch (e) { console.warn('Failed to push merged user', name, e); }
             }
           });

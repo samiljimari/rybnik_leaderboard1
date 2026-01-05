@@ -20,7 +20,7 @@ async function initFirebase(){
     }
 
     // Start realtime sync: calls onUpdate(remoteData) with full object mapping
-    function startSync(onUpdate){
+    function startSync(onUpdate, onError){
       const col = collection(db, 'users');
       return onSnapshot(col, snap => {
         const obj = {};
@@ -32,7 +32,10 @@ async function initFirebase(){
           };
         });
         try{ onUpdate(obj); }catch(e){ console.error('onUpdate handler failed', e); }
-      }, err => console.error('Firestore snapshot error', err));
+      }, err => {
+        console.error('Firestore snapshot error', err);
+        if(onError && typeof onError === 'function') onError(err);
+      });
     }
 
     window.FB = { app, db, saveUser, startSync };
