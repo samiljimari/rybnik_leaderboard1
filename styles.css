@@ -18,6 +18,9 @@ button{cursor:pointer;padding:10px 14px;border-radius:8px;border:1px solid rgba(
 .leaderboard{width:100%;border-collapse:collapse;background:var(--card);border-radius:6px;overflow:hidden}
 .leaderboard thead th{background:rgba(255,255,255,0.03);padding:8px;text-align:left;font-weight:600}
 .leaderboard tbody td{padding:8px;border-top:1px solid rgba(255,255,255,0.02)}
+.leaderboard tbody tr:nth-child(1){background:rgba(34,177,76,0.15);border-left:4px solid #22b14c}
+.leaderboard tbody tr:nth-child(2){background:rgba(255,192,0,0.12);border-left:4px solid #ffc000}
+.leaderboard tbody tr:nth-child(3){background:rgba(255,127,39,0.12);border-left:4px solid #ff7f27}
 .muted{color:var(--muted);font-size:13px}
 .hint{color:var(--muted);font-size:13px}
 #user-area{font-size:14px}
@@ -70,5 +73,14 @@ footer{margin-top:18px}
 @keyframes cheer{0%{transform:scale(1) translateY(0) rotate(0deg);filter:drop-shadow(0 6px 12px rgba(0,0,0,0.6));}15%{transform:scale(1.15) translateY(-50px) rotate(-15deg);filter:drop-shadow(0 8px 20px rgba(0,163,255,0.5));}30%{transform:scale(1.2) translateY(-70px) rotate(15deg);filter:drop-shadow(0 10px 25px rgba(0,163,255,0.6));}50%{transform:scale(1.15) translateY(-60px) rotate(-10deg);filter:drop-shadow(0 8px 20px rgba(0,163,255,0.5));}70%{transform:scale(1.1) translateY(-40px) rotate(5deg);filter:drop-shadow(0 6px 12px rgba(0,163,255,0.3));}100%{transform:scale(1) translateY(0) rotate(0deg);filter:drop-shadow(0 6px 12px rgba(0,0,0,0.6))}}
 
 @keyframes cry{0%{transform:scale(1) translateY(0) rotate(0deg);filter:drop-shadow(0 6px 12px rgba(0,0,0,0.6));}10%{transform:scale(0.9) translateY(10px) rotate(-5deg);}20%{transform:scale(0.9) translateY(-15px) rotate(5deg);filter:drop-shadow(0 6px 12px rgba(255,100,100,0.3));}35%{transform:scale(0.85) translateY(20px) rotate(-8deg);filter:drop-shadow(0 6px 12px rgba(255,100,100,0.5));}50%{transform:scale(0.85) translateY(-10px) rotate(8deg);filter:drop-shadow(0 6px 12px rgba(255,100,100,0.5));}65%{transform:scale(0.9) translateY(15px) rotate(-5deg);filter:drop-shadow(0 6px 12px rgba(255,100,100,0.3));}80%{transform:scale(0.95) translateY(-5px) rotate(3deg);}100%{transform:scale(1) translateY(0) rotate(0deg);filter:drop-shadow(0 6px 12px rgba(0,0,0,0.6))}}
+
+@media (max-width: 1200px) {
+  .friend-head{width:140px;height:140px}
+}
+
+@media (max-width: 768px) {
+  .friend-head{width:100px;height:100px}
+  #friends-container{display:none}
+}
 
 

@@ -394,7 +394,12 @@ const FRIENDS = [
   { name: 'Mark', img: 'mark.png' },
   { name: 'Matej', img: 'matej.png' },
   { name: 'Pepo', img: 'pepo.png' },
-  { name: 'Stevko', img: 'stevko.png' }
+  { name: 'Stevko', img: 'stevko.png' },
+  { name: 'Billy', img: 'billy.png' },
+  { name: 'Floyd', img: 'floyd.png' },
+  { name: 'Kirk', img: 'kirk.png' },
+  { name: 'Zidan', img: 'zidan.png' },
+  { name: 'Hitler', img: 'hitler.png' }
 ];
 
 const friendHeads = [];
@@ -406,12 +411,17 @@ function initializeFriendHeads() {
   
   const container = document.getElementById('friends-container');
   const positions = [
-    { top: '5%', left: '1%' },
-    { top: '45%', left: '1%' },
-    { bottom: '5%', left: '1%' },
-    { top: '5%', right: '1%' },
-    { top: '45%', right: '1%' },
-    { bottom: '5%', right: '1%' }
+    { top: '5%', left: '0.5%' },
+    { top: '28%', left: '1.5%' },
+    { top: '55%', left: '0.8%' },
+    { top: '78%', left: '1.2%' },
+    { top: '15%', left: '11%' },
+    { top: '50%', left: '11.5%' },
+    { top: '82%', left: '10.8%' },
+    { top: '8%', right: '11%' },
+    { top: '42%', right: '10.8%' },
+    { top: '72%', right: '11.2%' },
+    { top: '35%', right: '0.5%' }
   ];
   
   // Shuffle friends randomly
