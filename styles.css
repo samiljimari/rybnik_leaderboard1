@@ -80,7 +80,9 @@ footer{margin-top:18px}
 
 @media (max-width: 768px) {
   .friend-head{width:100px;height:100px}
-  #friends-container{display:none}
+  .friend-head-mobile-visible{display:block !important}
+  .friend-head-mobile-hidden{display:none !important}
+  #friends-container{display:block}
 }
 
 

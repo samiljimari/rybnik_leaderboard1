@@ -2,6 +2,8 @@
 const STORAGE_KEY = 'ski_leaderboard_v1';
 const lastSavedAt = {};
 const pendingDeletes = new Map();
+let lastDataRefresh = Date.now();
+const DATA_REFRESH_INTERVAL = 30000; // Refresh data every 30 seconds
 
 const $ = (s) => document.querySelector(s);
 
@@ -27,6 +29,23 @@ function loadData() {
 
 function saveData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  lastDataRefresh = Date.now();
+}
+
+function refreshDataIfNeeded() {
+  if (window.FB && typeof window.FB.getAllUsers === 'function' && (Date.now() - lastDataRefresh) > DATA_REFRESH_INTERVAL) {
+    try {
+      window.FB.getAllUsers().then(remoteData => {
+        if (remoteData) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(remoteData));
+          lastDataRefresh = Date.now();
+          renderApp();
+        }
+      }).catch(err => console.warn('Data refresh failed:', err));
+    } catch (e) {
+      console.warn('Could not refresh data from Firebase:', e);
+    }
+  }
 }
 
 function login(username) {
@@ -53,6 +72,7 @@ function renderApp() {
   const user = currentUser();
   const loginEl = $('#login');
   const appEl = $('#app');
+  refreshDataIfNeeded();
   if (!user) {
     loginEl.classList.remove('hidden');
     appEl.classList.add('hidden');
@@ -489,7 +509,13 @@ window.addEntry = function(user, type, value) {
 const audioElement = document.getElementById('background-music');
 if (audioElement) {
   audioElement.volume = 0.3;
-  audioElement.currentTime = 75;
+  
+  // Wait for metadata to load before setting currentTime
+  const setAudioStart = () => {
+    audioElement.currentTime = 75;
+  };
+  
+  audioElement.addEventListener('loadedmetadata', setAudioStart);
   
   // Try to play immediately (won't work without user interaction)
   audioElement.play().catch(err => {
@@ -511,5 +537,41 @@ if (audioElement) {
     }
   });
 }
+
+// Mobile-specific avatar display
+function initMobileAvatars() {
+  const isMobile = window.innerWidth <= 768;
+  if (!isMobile) return;
+  
+  // Hide all heads initially on mobile
+  friendHeads.forEach(headData => {
+    headData.element.classList.add('friend-head-mobile-hidden');
+  });
+  
+  // Show 3 random ones every 3 seconds
+  setInterval(() => {
+    // Hide all
+    friendHeads.forEach(headData => {
+      headData.element.classList.add('friend-head-mobile-hidden');
+      headData.element.classList.remove('friend-head-mobile-visible');
+    });
+    
+    // Show 3 random after a short delay
+    setTimeout(() => {
+      const shuffled = [...friendHeads].sort(() => Math.random() - 0.5).slice(0, 3);
+      shuffled.forEach(headData => {
+        headData.element.classList.remove('friend-head-mobile-hidden');
+        headData.element.classList.add('friend-head-mobile-visible');
+      });
+    }, 100);
+  }, 3000);
+}
+
+// Call after heads are initialized
+setTimeout(() => {
+  if (friendHeads.length > 0) {
+    initMobileAvatars();
+  }
+}, 500);
 
 renderApp();
