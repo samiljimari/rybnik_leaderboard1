@@ -341,27 +341,34 @@ function startRemoteSyncIfAvailable() {
             const l = local[name] || { speeds: [], bacs: [] };
 
             function mergeArr(a, b) {
+              // Merge by timestamp - keep newest entry for each timestamp, keep all unique timestamps
               const map = new Map();
-              (a || []).forEach(it => { if (it && it.t) map.set(it.t, it); });
-              (b || []).forEach(it => { if (it && it.t) map.set(it.t, it); });
+              (a || []).forEach(it => { 
+                if (it && typeof it.t === 'number') {
+                  const existing = map.get(it.t);
+                  // Keep the entry with the highest value if timestamps match (shouldn't happen but safeguard)
+                  if (!existing || it.v > existing.v) {
+                    map.set(it.t, it);
+                  }
+                }
+              });
+              (b || []).forEach(it => { 
+                if (it && typeof it.t === 'number') {
+                  const existing = map.get(it.t);
+                  if (!existing || it.v > existing.v) {
+                    map.set(it.t, it);
+                  }
+                }
+              });
               return Array.from(map.values()).sort((x, y) => x.t - y.t);
             }
 
-            const me = name === currentUser();
-            if (me) {
-              // For current user, LOCAL is authoritative (they just made a delete/add locally)
-              // Don't merge with remote, use local exactly as-is
-              merged[name] = {
-                speeds: (l.speeds || []).slice().sort((a, b) => a.t - b.t),
-                bacs: (l.bacs || []).slice().sort((a, b) => a.t - b.t)
-              };
-            } else {
-              // For other users, merge remote + local (union by timestamp)
-              merged[name] = {
-                speeds: mergeArr(r.speeds, l.speeds),
-                bacs: mergeArr(r.bacs, l.bacs)
-              };
-            }
+            // Always merge by timestamp, don't give special treatment to current user
+            // This prevents stale local data from overwriting remote updates
+            merged[name] = {
+              speeds: mergeArr(r.speeds, l.speeds),
+              bacs: mergeArr(r.bacs, l.bacs)
+            };
           });
 
           saveData(merged);
