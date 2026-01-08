@@ -503,6 +503,7 @@ window.addEntry = function(user, type, value) {
   const isHighScore = isNewHighScore(type, value);
   originalAddEntry.call(this, user, type, value);
   setTimeout(() => reactToScoreSubmission(isHighScore), 100);
+  showMobileAvatars();
 };
 
 // Background music setup
@@ -547,23 +548,25 @@ function initMobileAvatars() {
   friendHeads.forEach(headData => {
     headData.element.classList.add('friend-head-mobile-hidden');
   });
+}
+
+function showMobileAvatars() {
+  const isMobile = window.innerWidth <= 768;
+  if (!isMobile || friendHeads.length === 0) return;
   
-  // Show 3 random ones every 3 seconds
-  setInterval(() => {
-    // Hide all
-    friendHeads.forEach(headData => {
+  // Show 3 random
+  const shuffled = [...friendHeads].sort(() => Math.random() - 0.5).slice(0, 3);
+  shuffled.forEach(headData => {
+    headData.element.classList.remove('friend-head-mobile-hidden');
+    headData.element.classList.add('friend-head-mobile-visible');
+  });
+  
+  // Hide after 3 seconds
+  setTimeout(() => {
+    shuffled.forEach(headData => {
       headData.element.classList.add('friend-head-mobile-hidden');
       headData.element.classList.remove('friend-head-mobile-visible');
     });
-    
-    // Show 3 random after a short delay
-    setTimeout(() => {
-      const shuffled = [...friendHeads].sort(() => Math.random() - 0.5).slice(0, 3);
-      shuffled.forEach(headData => {
-        headData.element.classList.remove('friend-head-mobile-hidden');
-        headData.element.classList.add('friend-head-mobile-visible');
-      });
-    }, 100);
   }, 3000);
 }
 
