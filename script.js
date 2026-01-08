@@ -485,4 +485,31 @@ window.addEntry = function(user, type, value) {
   setTimeout(() => reactToScoreSubmission(isHighScore), 100);
 };
 
+// Background music setup
+const audioElement = document.getElementById('background-music');
+if (audioElement) {
+  audioElement.volume = 0.3;
+  audioElement.currentTime = 75;
+  
+  // Try to play immediately (won't work without user interaction)
+  audioElement.play().catch(err => {
+    // If autoplay is blocked, wait for user interaction
+    const startAudio = () => {
+      audioElement.currentTime = 75;
+      audioElement.play().catch(e => console.log('Could not play audio:', e));
+      document.removeEventListener('click', startAudio);
+      document.removeEventListener('keydown', startAudio);
+    };
+    document.addEventListener('click', startAudio);
+    document.addEventListener('keydown', startAudio);
+  });
+  
+  // Loop from 1:15 mark
+  audioElement.addEventListener('timeupdate', () => {
+    if (audioElement.currentTime > audioElement.duration - 2) {
+      audioElement.currentTime = 75;
+    }
+  });
+}
+
 renderApp();
