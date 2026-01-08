@@ -1,11 +1,21 @@
 // Leaderboard app: username login, localStorage + Firebase sync, delete with undo
 const STORAGE_KEY = 'ski_leaderboard_v1';
+const DELETIONS_KEY = 'ski_leaderboard_deletions_v1';
 const lastSavedAt = {};
 const pendingDeletes = new Map();
 let lastDataRefresh = Date.now();
 const DATA_REFRESH_INTERVAL = 30000; // Refresh data every 30 seconds
 
 const $ = (s) => document.querySelector(s);
+
+function loadDeletions() {
+  const raw = localStorage.getItem(DELETIONS_KEY);
+  return raw ? JSON.parse(raw) : {};
+}
+
+function saveDeletions(deletions) {
+  localStorage.setItem(DELETIONS_KEY, JSON.stringify(deletions));
+}
 
 function loadData() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -211,6 +221,13 @@ function deleteEntry(name, type, ts) {
   const backup = Object.assign({}, arr[idx]);
   data[name][arrName] = arr.filter(e => e.t !== ts);
   saveData(data);
+  
+  // Track this deletion by entry timestamp
+  const deletions = loadDeletions();
+  deletions[name] = deletions[name] || {};
+  deletions[name][`${type}|${ts}`] = Date.now(); // Record when this specific entry was deleted
+  saveDeletions(deletions);
+  
   renderLeaderboards();
 
   if (window.FB && typeof window.FB.saveUser === 'function') {
@@ -239,6 +256,14 @@ function deleteEntry(name, type, ts) {
     cur[name] = cur[name] || { speeds: [], bacs: [] };
     cur[name][arrName] = (cur[name][arrName] || []).concat([backup]).sort((a, b) => a.t - b.t);
     saveData(cur);
+    
+    // Remove this deletion tracking
+    const deletions = loadDeletions();
+    if (deletions[name]) {
+      delete deletions[name][`${type}|${ts}`];
+    }
+    saveDeletions(deletions);
+    
     renderLeaderboards();
     if (window.FB && typeof window.FB.saveUser === 'function') {
       window.FB.saveUser(name, cur[name]).then(() => {
@@ -333,30 +358,39 @@ function startRemoteSyncIfAvailable() {
       if (remoteData && typeof remoteData === 'object') {
         try {
           const local = loadData();
+          const deletions = loadDeletions();
           const merged = {};
           const users = new Set([...Object.keys(remoteData), ...Object.keys(local)]);
 
           users.forEach(name => {
             const r = remoteData[name] || { speeds: [], bacs: [] };
             const l = local[name] || { speeds: [], bacs: [] };
+            const userDeletions = deletions[name] || {};
 
-            function mergeArr(a, b) {
+            function mergeArr(a, b, type) {
               // Merge by timestamp - keep newest entry for each timestamp, keep all unique timestamps
               const map = new Map();
               (a || []).forEach(it => { 
                 if (it && typeof it.t === 'number') {
-                  const existing = map.get(it.t);
-                  // Keep the entry with the highest value if timestamps match (shouldn't happen but safeguard)
-                  if (!existing || it.v > existing.v) {
-                    map.set(it.t, it);
+                  const delKey = `${type}|${it.t}`;
+                  // Skip if this entry was explicitly deleted
+                  if (!userDeletions[delKey]) {
+                    const existing = map.get(it.t);
+                    if (!existing || it.v > existing.v) {
+                      map.set(it.t, it);
+                    }
                   }
                 }
               });
               (b || []).forEach(it => { 
                 if (it && typeof it.t === 'number') {
-                  const existing = map.get(it.t);
-                  if (!existing || it.v > existing.v) {
-                    map.set(it.t, it);
+                  const delKey = `${type}|${it.t}`;
+                  // Skip if this entry was explicitly deleted
+                  if (!userDeletions[delKey]) {
+                    const existing = map.get(it.t);
+                    if (!existing || it.v > existing.v) {
+                      map.set(it.t, it);
+                    }
                   }
                 }
               });
@@ -366,8 +400,8 @@ function startRemoteSyncIfAvailable() {
             // Always merge by timestamp, don't give special treatment to current user
             // This prevents stale local data from overwriting remote updates
             merged[name] = {
-              speeds: mergeArr(r.speeds, l.speeds),
-              bacs: mergeArr(r.bacs, l.bacs)
+              speeds: mergeArr(r.speeds, l.speeds, 'speed'),
+              bacs: mergeArr(r.bacs, l.bacs, 'bac')
             };
           });
 
