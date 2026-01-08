@@ -387,4 +387,92 @@ function startRemoteSyncIfAvailable() {
 startRemoteSyncIfAvailable();
 window.addEventListener('firebase-ready', () => { startRemoteSyncIfAvailable(); });
 
+// Friend head reactions system
+const FRIENDS = [
+  { name: 'Adamek', img: 'adamek.png' },
+  { name: 'Ja', img: 'ja.png' },
+  { name: 'Mark', img: 'mark.png' },
+  { name: 'Matej', img: 'matej.png' },
+  { name: 'Pepo', img: 'pepo.png' },
+  { name: 'Stevko', img: 'stevko.png' }
+];
+
+const friendHeads = [];
+let friendsInitialized = false;
+
+function initializeFriendHeads() {
+  if (friendsInitialized) return;
+  friendsInitialized = true;
+  
+  const container = document.getElementById('friends-container');
+  const positions = [
+    { top: '5%', left: '1%' },
+    { top: '45%', left: '1%' },
+    { bottom: '5%', left: '1%' },
+    { top: '5%', right: '1%' },
+    { top: '45%', right: '1%' },
+    { bottom: '5%', right: '1%' }
+  ];
+  
+  // Shuffle friends randomly
+  const shuffled = [...FRIENDS].sort(() => Math.random() - 0.5);
+  
+  shuffled.forEach((friend, index) => {
+    const head = document.createElement('div');
+    head.className = 'friend-head';
+    head.style.backgroundImage = `url('${friend.img}')`;
+    head.title = friend.name;
+    
+    const pos = positions[index % positions.length];
+    Object.assign(head.style, pos);
+    
+    container.appendChild(head);
+    friendHeads.push({ element: head, friend });
+  });
+}
+
+function isNewHighScore(type, value) {
+  const data = loadData();
+  let isHighest = true;
+  
+  Object.keys(data).forEach(username => {
+    const entries = type === 'speed' ? data[username].speeds : data[username].bacs;
+    if (entries.length > 0) {
+      const maxValue = Math.max(...entries.map(e => e.v));
+      if (maxValue > value) {
+        isHighest = false;
+      }
+    }
+  });
+  
+  return isHighest;
+}
+
+function reactToScoreSubmission(isHighScore) {
+  initializeFriendHeads();
+  
+  const randomHeads = friendHeads.sort(() => Math.random() - 0.5).slice(0, Math.ceil(friendHeads.length / 2));
+  
+  randomHeads.forEach(headData => {
+    const head = headData.element;
+    head.classList.remove('cheering', 'crying');
+    
+    if (isHighScore) {
+      head.classList.add('cheering');
+      setTimeout(() => head.classList.remove('cheering'), 800);
+    } else {
+      head.classList.add('crying');
+      setTimeout(() => head.classList.remove('crying'), 1000);
+    }
+  });
+}
+
+// Hook into addEntry to trigger reactions
+const originalAddEntry = window.addEntry;
+window.addEntry = function(user, type, value) {
+  const isHighScore = isNewHighScore(type, value);
+  originalAddEntry.call(this, user, type, value);
+  setTimeout(() => reactToScoreSubmission(isHighScore), 100);
+};
+
 renderApp();
